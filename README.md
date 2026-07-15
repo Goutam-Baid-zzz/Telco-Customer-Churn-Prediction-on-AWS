@@ -163,7 +163,7 @@ A default, untuned XGBoost classifier was used — no hyperparameter search, no 
 |---|---|
 | **IAM Roles** ![IAM roles](screenshots/00-iam-roles.png) | **S3 Bucket Structure** ![S3 structure](screenshots/01-s3-bucket-structure.png) |
 | **Glue ETL Script** ![Glue script](screenshots/02-glue-etl-script.png) | **Glue Job — Succeeded** ![Glue run](screenshots/02-glue-job-run-success.png) |
-| **SageMaker Notebook Instance** ![Notebook](screenshots/03-sagemaker-notebook-instance.png) | **Training Script in Jupyter** ![Train script](screenshots/03-jupyter-train-script.png) |
+| **SageMaker Notebook Instance** ![Notebook](screenshots/03-sagemaker-notebook-instance.png) | **Training Script in Jupyter** ![Train script](screenshots/04-jupyter-train-script.png) |
 | **API Gateway Routes** ![Routes](screenshots/05-api-gateway-routes.png) | **Lambda Test — 200 OK** ![Lambda test](screenshots/05-lambda-test-success.png) |
 
 ---
