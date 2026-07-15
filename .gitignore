@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.aws/
+node_modules/
+*.tar.gz
+data/Telco-Customer-Churn.csv

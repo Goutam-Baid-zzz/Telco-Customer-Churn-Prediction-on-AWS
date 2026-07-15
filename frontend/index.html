@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Check — Churn Diagnostics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0E17;
+    --panel: #10151F;
+    --panel-raised: #141A26;
+    --line: #212A3A;
+    --line-bright: #2E3B52;
+    --text: #E7ECF5;
+    --text-dim: #7D8AA3;
+    --text-faint: #4B5670;
+    --signal-good: #3DDC97;
+    --signal-warn: #F5B84C;
+    --signal-bad: #F0546B;
+    --focus: #5B8CFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(91, 140, 255, 0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(61, 220, 151, 0.04), transparent 45%),
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: auto, auto, 42px 42px, 42px 42px;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  ::selection { background: var(--focus); color: #fff; }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-bottom: 32px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--signal-good);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .brand-eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--signal-good);
+    box-shadow: 0 0 8px var(--signal-good);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(30px, 4.2vw, 44px);
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+
+  .subhead {
+    color: var(--text-dim);
+    font-size: 15px;
+    max-width: 460px;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  .header-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    text-align: right;
+    line-height: 1.7;
+  }
+
+  .header-meta span { color: var(--text-dim); }
+
+  /* ---------- Layout ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Panels ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-bright), transparent);
+  }
+
+  .corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--line-bright);
+    opacity: 0.7;
+  }
+  .corner.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .corner.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    margin: 0 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* ---------- Form ---------- */
+  .form-panel { padding: 32px; }
+
+  .field-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 18px;
+    margin-bottom: 30px;
+  }
+
+  .field-group.stack-1 { grid-template-columns: 1fr; }
+
+  @media (max-width: 560px) {
+    .field-group { grid-template-columns: 1fr; }
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  label span.lbl {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+
+  select, input[type="number"] {
+    background: var(--panel-raised);
+    border: 1px solid var(--line-bright);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237D8AA3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
+  }
+
+  select:hover, input:hover { border-color: #3A4A66; }
+  select:focus, input:focus {
+    border-color: var(--focus);
+    background: #161D2C;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
+
+  .submit-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+  }
+
+  button#submitBtn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: 0.01em;
+    color: #06110C;
+    background: var(--signal-good);
+    border: none;
+    border-radius: 7px;
+    padding: 13px 26px;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease;
+    box-shadow: 0 0 0 rgba(61, 220, 151, 0);
+  }
+
+  button#submitBtn:hover:not(:disabled) {
+    box-shadow: 0 4px 20px rgba(61, 220, 151, 0.25);
+    transform: translateY(-1px);
+  }
+
+  button#submitBtn:disabled {
+    background: #2A3345;
+    color: var(--text-faint);
+    cursor: not-allowed;
+  }
+
+  .submit-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Signal Panel (signature element) ---------- */
+  .signal-panel {
+    padding: 32px 30px;
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+  }
+
+  .signal-readout {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px 0 8px;
+  }
+
+  .bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+    height: 90px;
+    margin-bottom: 22px;
+  }
+
+  .bars .bar {
+    width: 14px;
+    border-radius: 3px 3px 1px 1px;
+    background: var(--line-bright);
+    transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.6s ease, box-shadow 0.6s ease;
+  }
+
+  .bars .bar:nth-child(1) { height: 18%; }
+  .bars .bar:nth-child(2) { height: 34%; }
+  .bars .bar:nth-child(3) { height: 52%; }
+  .bars .bar:nth-child(4) { height: 72%; }
+  .bars .bar:nth-child(5) { height: 100%; }
+
+  .bars.idle .bar { animation: idle-flicker 2.4s ease-in-out infinite; }
+  .bars.idle .bar:nth-child(1) { animation-delay: 0s; }
+  .bars.idle .bar:nth-child(2) { animation-delay: 0.15s; }
+  .bars.idle .bar:nth-child(3) { animation-delay: 0.3s; }
+  .bars.idle .bar:nth-child(4) { animation-delay: 0.45s; }
+  .bars.idle .bar:nth-child(5) { animation-delay: 0.6s; }
+
+  @keyframes idle-flicker {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.7; }
+  }
+
+  .readout-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .readout-value .unit { font-size: 20px; color: var(--text-faint); margin-left: 2px; }
+
+  .readout-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 10px;
+  }
+
+  .verdict {
+    margin-top: 22px;
+    padding: 12px 16px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+  }
+
+  .verdict strong { color: var(--text); }
+
+  .verdict.risk-low { border-color: rgba(61, 220, 151, 0.35); }
+  .verdict.risk-med { border-color: rgba(245, 184, 76, 0.35); }
+  .verdict.risk-high { border-color: rgba(240, 84, 107, 0.35); }
+
+  .signal-footer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+
+  .error-banner {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 7px;
+    background: rgba(240, 84, 107, 0.08);
+    border: 1px solid rgba(240, 84, 107, 0.4);
+    color: #FFB2C0;
+    font-size: 13px;
+    display: none;
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  legend { display: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Live diagnostic tool</div>
+      <h1>Signal Check</h1>
+      <p class="subhead">Run any account profile through the retention model to see how strong its connection to the network really is.</p>
+    </div>
+    <div class="header-meta">
+      MODEL <span>XGBoost · churn-v1</span><br>
+      ENDPOINT <span>ap-south-1</span><br>
+      AUC <span>0.834</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- FORM -->
+    <div class="panel form-panel">
+      <div class="corner tl"></div>
+      <div class="corner br"></div>
+
+      <form id="churnForm">
+
+        <p class="section-label">Account</p>
+        <fieldset class="field-group">
+          <legend>Account</legend>
+          <label><span class="lbl">Gender</span>
+            <select name="gender">
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+            </select>
+          </label>
+          <label><span class="lbl">Senior citizen</span>
+            <select name="SeniorCitizen">
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </label>
+          <label><span class="lbl">Partner</span>
+            <select name="Partner">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+          <label><span class="lbl">Dependents</span>
+            <select name="Dependents">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+          <label><span class="lbl">Tenure (months)</span>
+            <input type="number" name="tenure" value="1" min="0">
+          </label>
+          <label><span class="lbl">Contract</span>
+            <select name="Contract">
+              <option value="Month-to-month">Month-to-month</option>
+              <option value="One year">One year</option>
+              <option value="Two year">Two year</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <p class="section-label">Services</p>
+        <fieldset class="field-group">
+          <legend>Services</legend>
+          <label><span class="lbl">Phone service</span>
+            <select name="PhoneService">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+          <label><span class="lbl">Multiple lines</span>
+            <select name="MultipleLines">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No phone service">No phone service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Internet service</span>
+            <select name="InternetService">
+              <option value="DSL">DSL</option>
+              <option value="Fiber optic">Fiber optic</option>
+              <option value="No">No</option>
+            </select>
+          </label>
+          <label><span class="lbl">Online security</span>
+            <select name="OnlineSecurity">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Online backup</span>
+            <select name="OnlineBackup">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Device protection</span>
+            <select name="DeviceProtection">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Tech support</span>
+            <select name="TechSupport">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Streaming TV</span>
+            <select name="StreamingTV">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+          <label><span class="lbl">Streaming movies</span>
+            <select name="StreamingMovies">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="No internet service">No internet service</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <p class="section-label">Billing</p>
+        <fieldset class="field-group">
+          <legend>Billing</legend>
+          <label><span class="lbl">Paperless billing</span>
+            <select name="PaperlessBilling">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+          <label><span class="lbl">Payment method</span>
+            <select name="PaymentMethod">
+              <option value="Electronic check">Electronic check</option>
+              <option value="Mailed check">Mailed check</option>
+              <option value="Bank transfer (automatic)">Bank transfer (automatic)</option>
+              <option value="Credit card (automatic)">Credit card (automatic)</option>
+            </select>
+          </label>
+          <label><span class="lbl">Monthly charges ($)</span>
+            <input type="number" step="0.01" name="MonthlyCharges" value="29.85" min="0">
+          </label>
+          <label><span class="lbl">Total charges ($)</span>
+            <input type="number" step="0.01" name="TotalCharges" value="29.85" min="0">
+          </label>
+        </fieldset>
+
+        <div class="submit-row">
+          <button type="submit" id="submitBtn">Run diagnostic</button>
+          <span class="submit-hint">→ sends profile to the live SageMaker endpoint</span>
+        </div>
+
+        <div class="error-banner" id="errorBox"></div>
+      </form>
+    </div>
+
+    <!-- SIGNAL / RESULT PANEL -->
+    <div class="panel signal-panel">
+      <div class="corner tl"></div>
+      <div class="corner br"></div>
+
+      <p class="section-label">Retention signal</p>
+
+      <div class="signal-readout">
+        <div class="bars idle" id="bars">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+        <div class="readout-value" id="readoutValue">— <span class="unit">%</span></div>
+        <div class="readout-label" id="readoutLabel">Awaiting diagnostic</div>
+
+        <div class="verdict" id="verdict">
+          Fill in the account profile and run a diagnostic to see the predicted churn risk and how confident the model is.
+        </div>
+      </div>
+
+      <div class="signal-footer">
+        <span>STATUS <span id="statusText" style="color: var(--text-dim);">idle</span></span>
+        <span id="timestampText">—</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const API_URL = "https://6xe6b6pdj4.execute-api.ap-south-1.amazonaws.com/prod/predict";
+
+  const form = document.getElementById("churnForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const errorBox = document.getElementById("errorBox");
+  const bars = document.getElementById("bars");
+  const barEls = bars.querySelectorAll(".bar");
+  const readoutValue = document.getElementById("readoutValue");
+  const readoutLabel = document.getElementById("readoutLabel");
+  const verdict = document.getElementById("verdict");
+  const statusText = document.getElementById("statusText");
+  const timestampText = document.getElementById("timestampText");
+
+  const numericFields = ["SeniorCitizen", "Partner", "Dependents", "tenure", "PhoneService", "PaperlessBilling"];
+  const floatFields = ["MonthlyCharges", "TotalCharges"];
+
+  function setBars(retentionPct) {
+    // retentionPct: 0-100, how likely the customer is to STAY (inverse of churn probability)
+    const filled = Math.round((retentionPct / 100) * 5);
+    const color = retentionPct >= 65 ? "var(--signal-good)"
+                : retentionPct >= 40 ? "var(--signal-warn)"
+                : "var(--signal-bad)";
+
+    barEls.forEach((bar, i) => {
+      const heights = [18, 34, 52, 72, 100];
+      if (i < filled) {
+        bar.style.height = heights[i] + "%";
+        bar.style.background = color;
+        bar.style.boxShadow = `0 0 10px ${color}55`;
+      } else {
+        bar.style.height = "12%";
+        bar.style.background = "var(--line-bright)";
+        bar.style.boxShadow = "none";
+      }
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.style.display = "none";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Scanning…";
+    statusText.textContent = "connecting";
+    bars.classList.add("idle");
+
+    const formData = new FormData(form);
+    const payload = {};
+    for (const [key, value] of formData.entries()) {
+      if (numericFields.includes(key)) payload[key] = parseInt(value, 10);
+      else if (floatFields.includes(key)) payload[key] = parseFloat(value);
+      else payload[key] = value;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error(`Request failed (${response.status})`);
+
+      const data = await response.json();
+      const willChurn = data.predictions[0] === 1;
+      const churnProb = data.probabilities[0] * 100;
+      const retentionPct = 100 - churnProb;
+
+      bars.classList.remove("idle");
+      setBars(retentionPct);
+
+      readoutValue.innerHTML = `${retentionPct.toFixed(1)}<span class="unit">%</span>`;
+      readoutLabel.textContent = "Predicted retention strength";
+
+      verdict.className = "verdict " + (retentionPct >= 65 ? "risk-low" : retentionPct >= 40 ? "risk-med" : "risk-high");
+      verdict.innerHTML = willChurn
+        ? `<strong>Weak signal.</strong> This profile is predicted to churn — ${churnProb.toFixed(1)}% churn probability.`
+        : `<strong>Signal holding.</strong> This profile is predicted to stay — ${churnProb.toFixed(1)}% churn probability.`;
+
+      statusText.textContent = "complete";
+      timestampText.textContent = new Date().toLocaleTimeString();
+
+    } catch (err) {
+      errorBox.textContent = "Diagnostic failed: " + err.message;
+      errorBox.style.display = "block";
+      statusText.textContent = "error";
+      bars.classList.add("idle");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Run diagnostic";
+    }
+  });
+</script>
+
+</body>
+</html>

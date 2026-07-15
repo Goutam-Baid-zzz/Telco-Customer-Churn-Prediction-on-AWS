@@ -1,0 +1,2 @@
+%%writefile src/requirements.txt
+xgboost==1.5.2
