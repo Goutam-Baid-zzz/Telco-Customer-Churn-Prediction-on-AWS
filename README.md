@@ -41,7 +41,7 @@ This is **not** a machine learning modeling exercise. The goal was never to sque
 ## 🏗 Architecture
 
 <p align="center">
-  <img src="docs/screenshots/architecture-diagram.svg" alt="Signal Check architecture diagram" width="480"/>
+  <img src="screenshots/architecture-diagram.svg" alt="Signal Check architecture diagram" width="480"/>
 </p>
 
 **Data flow, in words:**
@@ -90,8 +90,7 @@ telco-churn-aws/
 │   └── invoke_endpoint.py              # Lambda handler — API Gateway → SageMaker endpoint
 ├── frontend/
 │   └── index.html                      # Signal Check UI — single-file HTML/CSS/JS
-├── docs/
-│   └── screenshots/                    # console screenshots + architecture diagram
+├── screenshots/                        # console screenshots + architecture diagram
 ├── infra_notes/
 │   └── resource_names.md               # bucket/role/endpoint names for reference
 └── README.md
@@ -162,10 +161,10 @@ A default, untuned XGBoost classifier was used — no hyperparameter search, no 
 
 | | |
 |---|---|
-| **IAM Roles** ![IAM roles](docs/screenshots/00-iam-roles.png) | **S3 Bucket Structure** ![S3 structure](docs/screenshots/01-s3-bucket-structure.png) |
-| **Glue ETL Script** ![Glue script](docs/screenshots/02-glue-etl-script.png) | **Glue Job — Succeeded** ![Glue run](docs/screenshots/02-glue-job-run-success.png) |
-| **SageMaker Notebook Instance** ![Notebook](docs/screenshots/03-sagemaker-notebook-instance.png) | **Training Script in Jupyter** ![Train script](docs/screenshots/03-jupyter-train-script.png) |
-| **API Gateway Routes** ![Routes](docs/screenshots/05-api-gateway-routes.png) | **Lambda Test — 200 OK** ![Lambda test](docs/screenshots/05-lambda-test-success.png) |
+| **IAM Roles** ![IAM roles](screenshots/00-iam-roles.png) | **S3 Bucket Structure** ![S3 structure](screenshots/01-s3-bucket-structure.png) |
+| **Glue ETL Script** ![Glue script](screenshots/02-glue-etl-script.png) | **Glue Job — Succeeded** ![Glue run](screenshots/02-glue-job-run-success.png) |
+| **SageMaker Notebook Instance** ![Notebook](screenshots/03-sagemaker-notebook-instance.png) | **Training Script in Jupyter** ![Train script](screenshots/03-jupyter-train-script.png) |
+| **API Gateway Routes** ![Routes](screenshots/05-api-gateway-routes.png) | **Lambda Test — 200 OK** ![Lambda test](screenshots/05-lambda-test-success.png) |
 
 ---
 
